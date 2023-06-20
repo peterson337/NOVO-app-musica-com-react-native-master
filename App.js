@@ -5,38 +5,69 @@ import { Audio } from "expo-av";
 import React, {useState, useEffect} from 'react';
 import { AntDesign } from '@expo/vector-icons'; 
 import {Player} from "./Player.js";
-
+import {db} from "./firebase";
+import {
+  addDoc, 
+  collection, 
+  orderBy, 
+  query,
+  getDocs,
+  } from "firebase/firestore";
 
 export default function App() {
   const [audioIndex, setAudioIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [audio, setAudio] = useState(null);
-  const [musicas, setMusicas] = useState([
+  const [musicas, setMusicas] = useState([]);
 
-          {
-              nome: 'Sweet child of mine',
-              artista: 'Guns N Rose',
-              playing: false,
-              file: require('./audio.mp3')
-          },
-
-          {
-            nome: 'Welcome to the jungle',
-            artista: 'Guns N Rose',
+  useEffect(() => {
+    const getMusicasFromFirestore = async () => {
+      try {
+        const querySnapshot = await getDocs(query(collection(db, "musicas"),
+         orderBy('data', 'desc')));
+        const musica = [];
+  
+        querySnapshot.forEach((doc) => {
+          const novaMusica = {
+            id: doc.id,
+            nomeMusica: doc.data().nomeMusica,
+            artista: doc.data().artista,
+            file: { uri: doc.data().file },
             playing: false,
-            file: require('./audio.mp3')
+          };
+  
+          musica.push(novaMusica);
+        });
+  
+        setMusicas(musica);
+      } catch (error) {
+        console.error("Erro ao recuperar as músicas:", error);
+      }
+    };
+  
+    getMusicasFromFirestore();
+  }, []);
+  
 
-        },
+  // Função para adicionar uma nova música ao Firestore
 
-        {
-          nome: 'This is love',
-          artista: 'Marron 5',
-          playing: false,
-          file: require('./audio.mp3')
+  const addMusicToFirestore = async (nomeMusica, artista, file) => {
+    try {
+      const docRef = await addDoc(collection(db, "musicas"), {
+        nomeMusica: nomeMusica,
+        artista: artista,
+        file: file,
+      });
+  
+      console.log("Música adicionada com ID:", docRef.id);
+    } catch (error) {
+      console.error("Erro ao adicionar a música:", error);
+    }
+  };
 
-      },
-  ]);
+  // Função para recuperar as músicas do Firestore
 
+  
   const onchangeMusic = async (id) => {
         let curFile = null;
         let newMusic = musicas.filter((val, k) => {
@@ -84,41 +115,42 @@ export default function App() {
             <Text style={{width: '50%', color: 'rgb(200,200,200)'}}>Música</Text>
             <Text style={{width: '50%', color: 'rgb(200,200,200)'}}>Artista</Text>
       </View>
-
+{/* 
+*/}
       {
         musicas.map((val, k) => {
             if (val.playing) {
               return(
-              <View style={styles.tableAcitved} key={val.nome}>
+              <View style={styles.tableAcitved} key={val.id}>
                   <TouchableOpacity onPress={() => onchangeMusic(k)}
                   style={{width: '100%', flexDirection: 'row'}}>
 
                     <Text style={{width: '50%', color: '#1DB954'}}>
 
-                      <AntDesign name="play" size={15} color="#1DB954"
+                      <AntDesign  name="play" size={15} color="#1DB954"
                        />
-                    {val.nome}</Text>
+                     {val.nomeMusica}</Text>
 
                     <Text style={{width: '50%', color: '#1DB954'}}>
-                      {val.artista}</Text>
+                    {val.artista}</Text>
 
                   </TouchableOpacity>
               </View>
               )
             } else {
               return(
-                <View style={styles.table} key={val.nome}>
+                <View style={styles.table} key={val.id}>
                 <TouchableOpacity onPress={() => onchangeMusic(k)}
                 style={{width: '100%', flexDirection: 'row'}}>
 
                   <Text style={{width: '50%', color: 'white'}}>
 
-                    <AntDesign name="play" size={15} color="white"
+                    <AntDesign  name="play" size={15} color="white"
                      />
-                  {val.nome}</Text>
+                  {val.nomeMusica}</Text>
 
                   <Text style={{width: '50%', color: 'white'}}>
-                    {val.artista}</Text>
+                  {val.artista}</Text>
 
                 </TouchableOpacity>
             </View>
@@ -162,8 +194,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomColor: 'white',
     borderBottomWidth: 1,
-    backgroundColor: 'gray',
+    backgroundColor: 'black',
   },
-
 
 });
